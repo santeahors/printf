@@ -1,62 +1,49 @@
 #include "main.h"
 /**
- * handle_print - Function for handling the printing process.
- * @fmt: The format specifier.
- * @i: Index used for calculating length, width, etc.
- * @list: Variable parameter list.
- * @buffer: Buffer where the result is temporarily stored.
- * @flags: Flags that control edge cases and formatting.
- * @width: Width of the argument.
- * @precision: Precision of the argument.
- * @size: Size of the argument.
- * @printed_chars: Pointer to the count of printed characters.
- *
- * Return: 0 on success.
+ * handle_print - Prints an argument based on its type
+ * @fmt: Formatted string in which to print the arguments.
+ * @list: List of arguments to be printed.
+ * @ind: ind.
+ * @buffer: Buffer array to handle print.
+ * @flags: Calculates active flags
+ * @width: get width.
+ * @precision: Precision specification
+ * @size: Size specifier
+ * Return: 1 or 2;
  */
-int handle_print(
-	const char *fmt,
-	int *i,
-	va_list list, char buffer[], int flags, int width, int precision, int size)
+int handle_print(const char *fmt, int *ind, va_list list, char buffer[],
+	int flags, int width, int precision, int size)
 {
-	int chars_written = 0;
-	char format_specifier;
+	int i, unknow_len = 0, printed_chars = -1;
+	fmt_t fmt_types[] = {
+		{'c', print_char}, {'s', print_string}, {'%', print_percent},
+		{'i', print_int}, {'d', print_int}, {'b', print_binary},
+		{'u', print_unsigned}, {'o', print_octal}, {'x', print_hexadecimal},
+		{'X', print_hexa_upper}, {'p', print_pointer}, {'S', print_non_printable},
+		{'r', print_reverse}, {'R', print_rot13string}, {'\0', NULL}
+	};
+	for (i = 0; fmt_types[i].fmt != '\0'; i++)
+		if (fmt[*ind] == fmt_types[i].fmt)
+			return (fmt_types[i].fn(list, buffer, flags, width, precision, size));
 
-	if (valid_format_specifier(fmt[*i]))
+	if (fmt_types[i].fmt == '\0')
 	{
-		format_specifier = fmt[*i];
-		switch (format_specifier)
+		if (fmt[*ind] == '\0')
+			return (-1);
+		unknow_len += write(1, "%%", 1);
+		if (fmt[*ind - 1] == ' ')
+			unknow_len += write(1, " ", 1);
+		else if (width)
 		{
-			case "d":
-			case "d":
-			chars_written =
-				print_int(va_arg(list, int), buffer, flags, width, precision, size);
-			break;
-			case "c":
-			chars_written =
-				print_int(va_arg(list, int), buffer, flags, width, precision, size);
-			break;
-			case "s":
-			chars_written =
-				print_string(va_arg(list, char*), buffer, flags, width, precision, size);
-			break;
-			case "b":
-			chars_written = print_binary(
-					va_arg(list, unsigned int), buffer, flags, width, precision, size);
-			break;
-			default:
-			chars_written =
-				handle_unknown_format(fmt[*i], buffer);
-			break;
+			--(*ind);
+			while (fmt[*ind] != ' ' && fmt[*ind] != '%')
+				--(*ind);
+			if (fmt[*ind] == ' ')
+				--(*ind);
+			return (1);
 		}
+		unknow_len += write(1, &fmt[*ind], 1);
+		return (unknow_len);
 	}
-	else
-	{
-		buffer[0] = fmt[*i];
-		chars_written = 1;
-	}
-	(*i)++;
-	*print_chars += chars_written;
-
-	va_end(list);
-	return (0);
+	return (printed_chars);
 }
